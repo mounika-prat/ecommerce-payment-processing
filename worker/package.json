@@ -1,0 +1,14 @@
+{
+  "name": "payment-worker",
+  "version": "1.0.0",
+  "private": true,
+  "main": "payment.worker.js",
+  "scripts": {
+    "start": "node payment.worker.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "ioredis": "^5.8.2",
+    "pg": "^8.16.3"
+  }
+}

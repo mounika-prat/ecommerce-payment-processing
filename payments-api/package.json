@@ -1,0 +1,18 @@
+{
+  "name": "ecommerce-payments-api",
+  "version": "1.0.0",
+  "private": true,
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "ioredis": "^5.8.2",
+    "loopback": "^3.28.0",
+    "loopback-boot": "^3.3.0",
+    "loopback-component-explorer": "^6.5.1",
+    "loopback-connector-postgresql": "^5.5.2",
+    "node-red-contrib-amqp-credentials": "^0.0.1"
+  }
+}

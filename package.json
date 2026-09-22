@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "loopback-explorer": "^2.0.2"
+  }
+}

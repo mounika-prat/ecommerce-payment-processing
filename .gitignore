@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# PostgreSQL local data
+pgdata/
+
+# Node-RED local/generated files
+node-red-data/.npm/
+node-red-data/.config.runtime.json
+node-red-data/.config.users.json
+node-red-data/.config.nodes.json
+node-red-data/flows_cred.json
+node-red-data/*.backup
+
+# OS/editor files
+.DS_Store
+.vscode/
+.idea/

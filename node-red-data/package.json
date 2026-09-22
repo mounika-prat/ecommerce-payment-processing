@@ -1,0 +1,11 @@
+{
+    "name": "node-red-project",
+    "description": "A Node-RED Project",
+    "version": "0.0.1",
+    "private": true,
+    "dependencies": {
+        "@nachyn/node-red-contrib-amqp": "~2.4.5",
+        "node-red-contrib-postgresql": "~0.16.2",
+        "node-red-contrib-redis": "~1.4.0"
+    }
+}

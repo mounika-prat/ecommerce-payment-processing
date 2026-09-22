@@ -1,0 +1,7 @@
+{
+  "db": {
+    "name": "db",
+    "connector": "postgresql",
+    "url": "postgres://payments:payments@127.0.0.1:5432/payments"
+  }
+}

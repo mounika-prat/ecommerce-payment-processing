@@ -1,0 +1,11 @@
+{
+  "name": "Customer", "plural": "customers", "base": "PersistedModel", "idInjection": true,
+  "properties": {
+    "name": {"type": "string", "required": true},
+    "email": {"type": "string", "required": true},
+    "phone": {"type": "string", "required": true},
+    "createdAt": {"type": "date", "required": true, "defaultFn": "now"}
+  },
+  "relations": {"orders": {"type": "hasMany", "model": "Order", "foreignKey": "customerId"}},
+  "acls": []
+}

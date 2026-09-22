@@ -1,0 +1,13 @@
+{
+  "name": "Product", "plural": "products", "base": "PersistedModel", "idInjection": true,
+  "properties": {
+    "name": {"type": "string", "required": true},
+    "description": {"type": "string", "required": true},
+    "price": {"type": "number", "required": true},
+    "stock": {"type": "number", "required": true},
+    "category": {"type": "string", "required": true},
+    "createdAt": {"type": "date", "required": true, "defaultFn": "now"}
+  },
+  "relations": {"orderItems": {"type": "hasMany", "model": "OrderItem", "foreignKey": "productId"}},
+  "acls": []
+}

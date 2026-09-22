@@ -1,0 +1,415 @@
+[
+    {
+        "id": "tab",
+        "type": "tab",
+        "label": "Payment Processing",
+        "disabled": false
+    },
+    {
+        "id": "f291d8ae921eb18f",
+        "type": "amqp-server",
+        "host": "rabbitmq",
+        "port": 5672,
+        "vhost": "/",
+        "keepalive": 30,
+        "usetls": false,
+        "verifyservercert": true,
+        "useca": false,
+        "usesettings": false,
+        "ca": "",
+        "usetopology": false,
+        "topology": "{\n\t\"exchanges\": [\n\t\t{\n\t\t\t\"name\": \"payment_exchange\",\n\t\t\t\"type\": \"direct\",\n\t\t\t\"options\": {\n\t\t\t\t\"durable\": true\n\t\t\t}\n\t\t}\n\t],\n\t\"queues\": [\n\t\t{\n\t\t\t\"name\": \"payment_initiated_queue\",\n\t\t\t\"options\": {\n\t\t\t\t\"durable\": true\n\t\t\t}\n\t\t}\n\t],\n\t\"bindings\": [\n\t\t{\n\t\t\t\"source\": \"payment_exchange\",\n\t\t\t\"queue\": \"payment_initiated_queue\",\n\t\t\t\"pattern\": \"payment.initiated\",\n\t\t\t\"args\": {}\n\t\t}\n\t]\n}"
+    },
+    {
+        "id": "e46d4fae280c9268",
+        "type": "redis-config",
+        "name": "local-redis",
+        "options": "{   \"host\": \"redis\",   \"port\": 6379 }",
+        "cluster": false,
+        "optionsType": "json"
+    },
+    {
+        "id": "e70267dca9801dab",
+        "type": "postgreSQLConfig",
+        "name": "dbConnection",
+        "host": "postgres",
+        "hostFieldType": "str",
+        "port": 5432,
+        "portFieldType": "num",
+        "database": "payments",
+        "databaseFieldType": "str",
+        "ssl": "false",
+        "sslFieldType": "bool",
+        "applicationName": "",
+        "applicationNameType": "str",
+        "max": 10,
+        "maxFieldType": "num",
+        "idle": 1000,
+        "idleFieldType": "num",
+        "connectionTimeout": 10000,
+        "connectionTimeoutFieldType": "num",
+        "userFieldType": "cred",
+        "userEnv": "",
+        "passwordFieldType": "cred",
+        "passwordEnv": ""
+    },
+    {
+        "id": "validate",
+        "type": "function",
+        "z": "tab",
+        "name": "Validate Payment",
+        "func": "const payment = typeof msg.payload === \"string\"\n    ? JSON.parse(msg.payload)\n    : msg.payload;\n\nlet failureReason = null;\n\nif (!payment.id) {\n    failureReason = \"Payment ID is missing\";\n}\nelse if (!payment.amount || payment.amount <= 0) {\n    failureReason = \"Payment amount must be greater than 0\";\n}\nelse if (!payment.currency) {\n    failureReason = \"Currency is missing\";\n}\nelse if (![\"INR\", \"USD\", \"EUR\"].includes(payment.currency)) {\n    failureReason = `Unsupported currency: ${payment.currency}`;\n}\nelse if (!payment.fromAccount) {\n    failureReason = \"From account is missing\";\n}\nelse if (!payment.toAccount) {\n    failureReason = \"To account is missing\";\n}\nelse if (payment.fromAccount === payment.toAccount) {\n    failureReason = \"From and To accounts cannot be the same\";\n}\n\nif (failureReason) {\n    payment.status = \"failed\";\n    payment.failureReason = failureReason;\n    msg.payload = payment;\n    node.error(failureReason, msg);\n    return null;\n}\n\npayment.status = \"initiated\";\nmsg.payload = payment;\nreturn msg;",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 120,
+        "wires": [
+            [
+                "fee"
+            ],
+            [
+                "failed"
+            ]
+        ]
+    },
+    {
+        "id": "fee",
+        "type": "function",
+        "z": "tab",
+        "name": "Calculate Fee",
+        "func": "const p=msg.payload; p.fee=Number(p.amount)*0.02; p.netAmount=Number(p.amount)-p.fee; p.status=\"authorized\"; msg.payload=p; return msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 100,
+        "wires": [
+            [
+                "debug-authorized",
+                "d40748502d2c614f"
+            ]
+        ]
+    },
+    {
+        "id": "debug-authorized",
+        "type": "debug",
+        "z": "tab",
+        "name": "Authorized Payment",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 760,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "failed",
+        "type": "debug",
+        "z": "tab",
+        "name": "Failed Payment",
+        "active": true,
+        "tosidebar": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "x": 540,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "aa56ba9dd8bf54da",
+        "type": "amqp in",
+        "z": "tab",
+        "name": "Payment Initiated",
+        "topic": "",
+        "iotype": "4",
+        "ioname": "payment_initiated_queue",
+        "server": "f291d8ae921eb18f",
+        "x": 120,
+        "y": 120,
+        "wires": [
+            [
+                "validate"
+            ]
+        ]
+    },
+    {
+        "id": "d40748502d2c614f",
+        "type": "amqp out",
+        "z": "tab",
+        "name": "Payment Authorized",
+        "routingkey": "payment.authorized",
+        "iotype": "0",
+        "ioname": "payment_exchange",
+        "server": "f291d8ae921eb18f",
+        "x": 860,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "0ca909271055fc4d",
+        "type": "inject",
+        "z": "tab",
+        "name": "Post Payment",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{   \"orderId\": 100,   \"amount\": 79999,   \"currency\": \"INR\",   \"fromAccount\": \"CUSTOMER_ACC_001\",   \"toAccount\": \"MERCHANT_ACC_001\",   \"paymentMethod\": \"UPI\",   \"status\": \"initiated\",   \"createdAt\": \"2026-09-16T10:00:00.000Z\",   \"id\": 100 }",
+        "payloadType": "json",
+        "x": 110,
+        "y": 40,
+        "wires": [
+            [
+                "validate"
+            ]
+        ]
+    },
+    {
+        "id": "ee8bfc7347d4e914",
+        "type": "http in",
+        "z": "tab",
+        "name": "",
+        "url": "/payment/:id",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 100,
+        "y": 240,
+        "wires": [
+            [
+                "f298aabf0b730f3a"
+            ]
+        ]
+    },
+    {
+        "id": "77badbdc752a2d23",
+        "type": "http response",
+        "z": "tab",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 1770,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "9a492b9e0d5b88d7",
+        "type": "redis-command",
+        "z": "tab",
+        "server": "e46d4fae280c9268",
+        "command": "GET",
+        "name": "Get Payment Cache",
+        "topic": "",
+        "params": "[]",
+        "paramsType": "json",
+        "payloadType": "json",
+        "block": false,
+        "x": 320,
+        "y": 360,
+        "wires": [
+            [
+                "f440b68085d356cb"
+            ]
+        ]
+    },
+    {
+        "id": "f298aabf0b730f3a",
+        "type": "function",
+        "z": "tab",
+        "name": "Create Cache Key",
+        "func": "const id = msg.req.params.id;\n\nmsg.topic = `payment:${id}`;\nmsg.payload = [];\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 110,
+        "y": 360,
+        "wires": [
+            [
+                "9a492b9e0d5b88d7"
+            ]
+        ]
+    },
+    {
+        "id": "f440b68085d356cb",
+        "type": "function",
+        "z": "tab",
+        "name": "Cache Check Function",
+        "func": "if (msg.payload === null || msg.payload === undefined) {\n    // Cache MISS\n    msg.cacheHit = false;\n    return [null, msg];\n}\n\n// Cache HIT\nmsg.cacheHit = true;\n\ntry {\n    msg.payload = JSON.parse(msg.payload);\n} catch (err) {\n    node.error(\"Invalid cached payment JSON\", msg);\n    return [null, msg];\n}\n\nreturn [msg, null];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 360,
+        "wires": [
+            [
+                "77badbdc752a2d23",
+                "35315355c321a9de"
+            ],
+            [
+                "c40aa03432b73a75"
+            ]
+        ]
+    },
+    {
+        "id": "c40aa03432b73a75",
+        "type": "function",
+        "z": "tab",
+        "name": "Prepare DB Parameter",
+        "func": "msg.params = [msg.req.params.id];\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 820,
+        "y": 440,
+        "wires": [
+            [
+                "7e707248ddf3958c"
+            ]
+        ]
+    },
+    {
+        "id": "59e855191408cd7a",
+        "type": "debug",
+        "z": "tab",
+        "name": "cache miss",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1170,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "dc91a5ee4d2c301d",
+        "type": "redis-command",
+        "z": "tab",
+        "server": "e46d4fae280c9268",
+        "command": "SET",
+        "name": "Cache Payment",
+        "topic": "",
+        "params": "[]",
+        "paramsType": "json",
+        "payloadType": "json",
+        "block": false,
+        "x": 1340,
+        "y": 700,
+        "wires": [
+            [
+                "b7525c0a62629e6c"
+            ]
+        ]
+    },
+    {
+        "id": "3b314d384c769272",
+        "type": "function",
+        "z": "tab",
+        "name": "Prepare Redis Cache",
+        "func": "const id = msg.req.params.id;\n\nmsg.topic = `payment:${id}`;\n\n// Redis SET needs the value as a string\nmsg.payload = JSON.stringify(msg.payload);\n\nmsg.params = [msg.payload];\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1100,
+        "y": 700,
+        "wires": [
+            [
+                "dc91a5ee4d2c301d"
+            ]
+        ]
+    },
+    {
+        "id": "b7525c0a62629e6c",
+        "type": "function",
+        "z": "tab",
+        "name": "Return Cached payment",
+        "func": "msg.payload = msg.paymentData;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1570,
+        "y": 700,
+        "wires": [
+            [
+                "77badbdc752a2d23"
+            ]
+        ]
+    },
+    {
+        "id": "35315355c321a9de",
+        "type": "debug",
+        "z": "tab",
+        "name": "cache hit",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "7e707248ddf3958c",
+        "type": "postgresql",
+        "z": "tab",
+        "name": "Get Payment From Postgres",
+        "query": "SELECT *\nFROM payment\nWHERE id = $1;",
+        "postgreSQLConfig": "e70267dca9801dab",
+        "split": false,
+        "rowsPerMsg": 1,
+        "outputs": 1,
+        "x": 940,
+        "y": 540,
+        "wires": [
+            [
+                "3b314d384c769272",
+                "59e855191408cd7a"
+            ]
+        ]
+    }
+]
